@@ -1,19 +1,23 @@
 package com.dareit.email;
 
+import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.Pair;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.TestPropertySource;
 
+import java.io.File;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Collectors;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.*;
 
 
 @SpringBootTest
@@ -33,7 +37,7 @@ class EmailServiceTests {
 
 
 	@Test
-	void testSendMails() throws InterruptedException {
+	void testSendMails() throws InterruptedException, IOException {
 		final Pair<List<EmailData>, List<EmailData>> emailData = getEmailData();
 
 		final ExecutorService service = Executors.newFixedThreadPool(2);
@@ -55,9 +59,28 @@ class EmailServiceTests {
 
         assertEquals(emailData.getLeft().size(), service1sendCount.get());
 		assertEquals(emailData.getRight().size(), service2sendCount.get());
+
+		final List<String> attachmentPaths = new ArrayList<>();
+		attachmentPaths.addAll(
+				emailData.getLeft().stream().map(emailData1 -> emailData1.getAttachmentPath()).collect(Collectors.toList()));
+		attachmentPaths.addAll(
+				emailData.getRight().stream().map(emailData1 -> emailData1.getAttachmentPath()).collect(Collectors.toList()));
+		deleteTestFiles(attachmentPaths);
 	}
 
-	private Pair<List<EmailData>, List<EmailData>> getEmailData() {
+	private void deleteTestFiles(final List<String> attachmentPaths) {
+		for (final String path : attachmentPaths) {
+			if (StringUtils.isBlank(path)) {
+				continue;
+			}
+			final File file = new File(path);
+			if (file.exists()) {
+				file.delete();
+			}
+		}
+	}
+
+	private Pair<List<EmailData>, List<EmailData>> getEmailData() throws IOException {
 		final List<EmailData> data1 = new ArrayList<>();
 		final List<EmailData> data2 = new ArrayList<>();
 
@@ -69,7 +92,7 @@ class EmailServiceTests {
 				"testmail 1",
 				"html 1",
 				"text 1",
-				null
+				getAttachmentPath("1.pdf")
 		);
 
 		final EmailData emailData2 = new EmailData(
@@ -80,13 +103,23 @@ class EmailServiceTests {
 				"testmail 2",
 				"html 2",
 				"text 2",
-				null
+				getAttachmentPath("2.pdf")
 		);
 
 		data1.add(emailData1);
 		data2.add(emailData2);
 
 		return Pair.of(data1, data2);
+	}
+
+	private String getAttachmentPath(final String fileName) throws IOException {
+		final File file = new File("src/test/resources/" + fileName);
+		if (!file.createNewFile()) {
+			fail();
+		}
+		assertTrue(file.exists());
+
+		return file.getPath();
 	}
 
 }
