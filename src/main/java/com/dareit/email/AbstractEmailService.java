@@ -45,9 +45,9 @@ public abstract class AbstractEmailService {
         this.password = password;
     }
 
-    public void sendMails(final List<EmailData> mails) {
+    public int sendMails(final List<EmailData> mails) {
         if (mails == null || mails.isEmpty()) {
-            return;
+            return -1;
         }
 
         final Transport transport;
@@ -55,9 +55,10 @@ public abstract class AbstractEmailService {
             transport = createSession();
         } catch (final Exception e) {
             LOGGER.error(e.getMessage(), e);
-            return;
+            return -1;
         }
 
+        int sendCount = 0;
         for (final EmailData emailData : mails) {
             try {
                 emailSendService.sendMail(
@@ -73,11 +74,15 @@ public abstract class AbstractEmailService {
             } catch (final Exception e) {
                 LOGGER.error(e.getMessage(), e);
                 closeSession(transport);
-                return;
+                return sendCount;
             }
+
+            sendCount++;
         }
 
         closeSession(transport);
+
+        return sendCount;
     }
 
     private Transport createSession() throws MessagingException {

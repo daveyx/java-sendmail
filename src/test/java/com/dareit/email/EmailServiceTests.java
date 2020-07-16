@@ -8,6 +8,12 @@ import org.springframework.test.context.TestPropertySource;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicInteger;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 
 @SpringBootTest
@@ -22,11 +28,33 @@ class EmailServiceTests {
 	@Autowired
 	private EmailService1 emailService1;
 
+	@Autowired
+	private EmailService2 emailService2;
+
 
 	@Test
-	void testSendMails() {
+	void testSendMails() throws InterruptedException {
 		final Pair<List<EmailData>, List<EmailData>> emailData = getEmailData();
-		emailService1.sendMails(emailData.getLeft());
+
+		final ExecutorService service = Executors.newFixedThreadPool(2);
+        final CountDownLatch latch = new CountDownLatch(2);
+
+        final AtomicInteger service1sendCount = new AtomicInteger();
+        service.execute(() -> {
+        	service1sendCount.set(emailService1.sendMails(emailData.getLeft()));
+            latch.countDown();
+        });
+
+        final AtomicInteger service2sendCount = new AtomicInteger();
+        service.execute(() -> {
+			service2sendCount.set(emailService2.sendMails(emailData.getRight()));
+            latch.countDown();
+        });
+
+        latch.await();
+
+        assertEquals(emailData.getLeft().size(), service1sendCount.get());
+		assertEquals(emailData.getRight().size(), service2sendCount.get());
 	}
 
 	private Pair<List<EmailData>, List<EmailData>> getEmailData() {
@@ -38,13 +66,25 @@ class EmailServiceTests {
 				null,
 				TO_EMAIL,
 				null,
-				"testmail",
-				"html",
-				"text",
+				"testmail 1",
+				"html 1",
+				"text 1",
+				null
+		);
+
+		final EmailData emailData2 = new EmailData(
+				FROM_EMAIL,
+				null,
+				TO_EMAIL,
+				null,
+				"testmail 2",
+				"html 2",
+				"text 2",
 				null
 		);
 
 		data1.add(emailData1);
+		data2.add(emailData2);
 
 		return Pair.of(data1, data2);
 	}
