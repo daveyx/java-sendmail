@@ -12,6 +12,7 @@ import javax.mail.internet.MimeMessage;
 import javax.mail.internet.MimeMultipart;
 import java.io.File;
 import java.io.IOException;
+import java.util.Objects;
 
 
 @Service
@@ -31,7 +32,19 @@ public class EmailSendService {
                   final String attachmentPath) throws IOException, MessagingException {
         LOGGER.info("sending mail to '" + toEmail + "'");
 
-        final InternetAddress from = new InternetAddress(fromEmail, fromName);
+        Objects.requireNonNull(transport);
+        Objects.requireNonNull(fromEmail);
+        Objects.requireNonNull(toEmail);
+        Objects.requireNonNull(subject);
+        Objects.requireNonNull(text);
+        Objects.requireNonNull(html);
+
+        final InternetAddress from;
+        if (StringUtils.isNotBlank(fromName)) {
+            from = new InternetAddress(fromEmail, fromName);
+        } else {
+            from = new InternetAddress(fromEmail);
+        }
         from.validate();
 
         final InternetAddress to = new InternetAddress(toEmail);
