@@ -6,6 +6,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.TestPropertySource;
+import org.springframework.util.FileSystemUtils;
 
 import java.io.File;
 import java.io.IOException;
@@ -36,6 +37,7 @@ class EmailServiceTests {
 	private EmailService2 emailService2;
 
 
+	@SuppressWarnings("Convert2MethodRef")
 	@Test
 	void testSendMails() throws InterruptedException, IOException {
 		final Pair<List<EmailData>, List<EmailData>> emailData = getEmailData();
@@ -75,7 +77,7 @@ class EmailServiceTests {
 			}
 			final File file = new File(path);
 			if (file.exists()) {
-				file.delete();
+				FileSystemUtils.deleteRecursively(file);
 			}
 		}
 	}
